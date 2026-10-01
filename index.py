@@ -15,21 +15,21 @@ def handler(event, context):
     try:
         body = json.loads(event.get('body', '{}'))
     except Exception:
-        return {'statusCode': 400, 'headers': headers, 'body': '{}'}
+        return {'statusCode': 400, 'headers': headers, 'body': '{"error":"bad json"}'}
     api_key = body.get('apiKey', '')
     folder_id = body.get('folderId', '')
     model = body.get('model', 'yandexgpt')
     messages = body.get('messages', [])
     if not api_key or not folder_id or not messages:
-        return {'statusCode': 400, 'headers': headers, 'body': '{"error":"missing fields"}'}
+        return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'error': 'missing', 'got_messages': bool(messages), 'got_key': bool(api_key), 'got_folder': bool(folder_id)})}
     payload = json.dumps({
         'modelUri': 'gpt://' + folder_id + '/' + model,
         'messages': messages,
         'completionOptions': {'temperature': 0.7, 'maxTokens': 2000}
-    }).encode('utf-8')
+    })
     req = urllib.request.Request(
         'https://llm.api.cloud.yandex.net/foundationModels/v1/completion',
-        data=payload,
+        data=payload.encode('utf-8'),
         headers={
             'Authorization': 'Bearer ' + api_key,
             'Content-Type': 'application/json'
@@ -44,4 +44,4 @@ def handler(event, context):
         err_body = e.read().decode('utf-8')
         return {'statusCode': e.code, 'headers': headers, 'body': err_body}
     except Exception as e:
-        return {'statusCode': 502, 'headers': headers, 'body': '{"error":"' + str(e) + '"}'}
+        return {'statusCode': 502, 'headers': headers, 'body': json.dumps({'error': str(e)})}

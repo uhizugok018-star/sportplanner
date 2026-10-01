@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/solovei/Desktop/Projects/projects/**)",
+      "Bash(find ~ -maxdepth 4 -type d -iname \"vps\")",
+      "Bash(cd \"/Users/solovei/.claude/projects/-Users-solovei-Desktop-Projects-projects--SportPlanner/memory/\")",
+      "Bash(cat MEMORY.md)"
+    ]
+  }
+}
