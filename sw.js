@@ -2,6 +2,7 @@ const CACHE = "sportplanner-v1";
 const ASSETS = [
   "/index.html",
   "/app.js",
+  "/setup.html",
   "/manifest.json",
   "/icon-192.svg",
   "/icon-512.svg"
