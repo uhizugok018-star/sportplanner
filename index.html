@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.svg">
+<title>SportPlanner · Марафон 2027</title>
+<style>
+:root{
+  --bg:#0b0d10; --bg2:#14181d; --bg3:#1c2229; --line:#2a3038;
+  --fg:#eef2f6; --fg2:#9aa4b1; --fg3:#5d6773;
+  --easy:#3aa170; --long:#3a86ff; --tempo:#ff8a3a; --intervals:#e5484d; --rest:#5d6773; --race:#c084fc; --fartlek:#e8a13a;
+  --ok:#3aa170; --warn:#e8a13a; --skip:#5d6773; --mod:#3a86ff;
+  --accent:#3a86ff;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Roboto,sans-serif;font-size:15px;line-height:1.4;overscroll-behavior:none}
+body{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
+button{font-family:inherit;font-size:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
+input,select,textarea{font-family:inherit;font-size:16px;color:var(--fg);background:var(--bg3);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:64px}
+
+.header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 14px env(safe-area-inset-top) 14px;padding-top:calc(10px + env(safe-area-inset-top));z-index:10}
+.h-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.h-title{font-weight:700;font-size:15px;letter-spacing:.2px}
+.h-sub{color:var(--fg2);font-size:12px;margin-top:2px}
+.h-stats{display:flex;gap:14px;margin-top:8px;font-size:12px;color:var(--fg2)}
+.h-stat b{color:var(--fg);font-weight:600}
+
+.zoombar{display:flex;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:3px;margin-top:10px;gap:3px}
+.zoombar button{flex:1;padding:8px 10px;border-radius:9px;color:var(--fg2);font-size:13px;font-weight:500}
+.zoombar button.on{background:var(--bg3);color:var(--fg)}
+
+.main{flex:1;padding:12px 14px 96px;overflow-x:hidden;touch-action:pan-y pinch-zoom}
+
+.weeknav{display:flex;align-items:center;justify-content:space-between;margin:6px 0 10px;color:var(--fg2);font-size:13px}
+.weeknav button{padding:6px 10px;border-radius:8px;background:var(--bg2);border:1px solid var(--line)}
+.weeknav .label{font-weight:600;color:var(--fg)}
+
+.daycard{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;position:relative;display:block;width:100%;text-align:left}
+.daycard.today{border-color:var(--accent);box-shadow:0 0 0 1px rgba(58,134,255,.25)}
+.daycard.done{opacity:.85}
+.daycard.skipped{opacity:.55}
+.dc-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.dc-date{font-size:12px;color:var(--fg2);font-weight:600;letter-spacing:.3px;text-transform:uppercase}
+.dc-status{margin-left:auto;font-size:11px;padding:3px 8px;border-radius:99px;font-weight:600}
+.st-pending{background:#222;color:var(--fg3)}
+.st-done{background:rgba(58,161,112,.18);color:var(--ok)}
+.st-partial{background:rgba(232,161,58,.18);color:var(--warn)}
+.st-skipped{background:#222;color:var(--fg3)}
+.st-over{background:rgba(192,132,252,.25);color:#c084fc;font-weight:700}
+.dc-title{font-weight:600;font-size:16px;margin:2px 0}
+.dc-meta{display:flex;gap:10px;flex-wrap:wrap;color:var(--fg2);font-size:13px;margin:6px 0 0}
+.dc-meta b{color:var(--fg);font-weight:600}
+.dc-desc{color:var(--fg2);font-size:13px;margin-top:8px;line-height:1.45}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:3px 7px;border-radius:6px}
+.tag.easy{background:rgba(58,161,112,.18);color:var(--easy)}
+.tag.long{background:rgba(58,134,255,.18);color:var(--long)}
+.tag.tempo{background:rgba(255,138,58,.18);color:var(--tempo)}
+.tag.intervals{background:rgba(229,72,77,.18);color:var(--intervals)}
+.tag.rest{background:#222;color:var(--rest)}
+.tag.race{background:rgba(192,132,252,.18);color:var(--race)}
+.tag.fartlek{background:rgba(232,161,58,.15);color:var(--fartlek)}
+
+.actual{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:13px;color:var(--fg2)}
+.actual b{color:var(--fg)}
+.actual .a-plan{color:var(--fg3);font-size:12px;margin-bottom:4px}
+.actual .a-plan span{color:var(--fg2)}
+.actual .a-row{display:flex;gap:12px;flex-wrap:wrap}
+.actual .a-note{margin-top:6px;color:var(--fg2);font-style:italic}
+.delta-good{color:var(--ok)}
+.delta-bad{color:#e5484d}
+
+/* week zoom */
+.zoom-week .daycard{padding:10px 12px}
+.zoom-week .dc-desc{display:none}
+.zoom-week .actual{font-size:12px}
+
+/* all zoom */
+.zoom-all .daycard{padding:8px 10px;margin-bottom:6px;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+.zoom-all .dc-head{margin:0;flex:0 0 auto}
+.zoom-all .dc-status{margin-left:0}
+.zoom-all .dc-title{font-size:14px;margin:0}
+.zoom-all .dc-meta{margin:0;font-size:12px}
+.zoom-all .dc-desc,.zoom-all .actual{display:none}
+.zoom-all .tag{display:none}
+
+.tsplit{display:flex;gap:6px;align-items:center}
+.tsplit input{flex:1;min-width:0;text-align:center}
+.tsplit .colon{color:var(--fg3);font-weight:700;flex:0 0 auto;font-size:18px}
+
+.suggestions{margin-bottom:6px}
+.sugg{background:rgba(58,134,255,.08);border:1px solid rgba(58,134,255,.35);border-radius:12px;padding:12px;margin-bottom:8px}
+.sugg-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sugg-icon{font-size:15px}
+.sugg-title{font-weight:700;font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.4px}
+.sugg-text{font-size:13px;color:var(--fg);margin-bottom:10px;line-height:1.4}
+.sugg-actions{display:flex;gap:8px}
+.sugg-actions button{flex:1;padding:9px;border-radius:9px;font-size:13px;font-weight:600;border:1px solid var(--line)}
+.sugg-apply{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sugg-dismiss{background:var(--bg3);color:var(--fg2)}
+
+.weekhead{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--fg3);margin:14px 4px 8px;display:flex;justify-content:space-between}
+.weekhead .wsum{color:var(--fg2);font-weight:600}
+
+.actbar{position:fixed;left:0;right:0;bottom:0;background:rgba(11,13,16,.92);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px;z-index:20}
+.actbar button{flex:1;padding:12px;border-radius:12px;background:var(--bg3);border:1px solid var(--line);font-weight:600;font-size:14px;color:var(--fg)}
+.actbar button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;z-index:50}
+.modal.on{display:flex}
+.sheet{background:var(--bg2);width:100%;max-height:92dvh;overflow:auto;border-radius:18px 18px 0 0;border-top:1px solid var(--line);padding:14px 14px calc(14px + env(safe-area-inset-bottom));animation:slideUp .25s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet h3{margin:2px 0 12px;font-size:18px;font-weight:700}
+.sheet h4{margin:14px 0 8px;font-size:13px;color:var(--fg2);text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+.sheet .grip{width:40px;height:4px;background:var(--line);border-radius:99px;margin:-4px auto 10px}
+.sheet .row{display:flex;gap:10px;margin-bottom:10px}
+.sheet .row > *{flex:1}
+.sheet label{display:block;font-size:12px;color:var(--fg2);margin-bottom:4px;font-weight:600}
+.sheet .actions{display:flex;gap:8px;margin-top:14px}
+.sheet .actions button{flex:1;padding:13px;border-radius:12px;font-weight:600}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-ghost{background:var(--bg3);border:1px solid var(--line);color:var(--fg)}
+.btn-danger{background:rgba(229,72,77,.15);color:#e5484d;border:1px solid rgba(229,72,77,.3)}
+.rpe{display:flex;gap:4px}
+.rpe button{flex:1;padding:10px 0;background:var(--bg3);border:1px solid var(--line);border-radius:8px;font-weight:600;font-size:13px}
+.rpe button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.statpick{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px}
+.statpick button{padding:10px;background:var(--bg3);border:1px solid var(--line);border-radius:10px;font-weight:600;font-size:13px}
+.statpick button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.aiout{background:var(--bg3);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:14px;white-space:pre-wrap;color:var(--fg);max-height:50vh;overflow:auto;margin-top:10px}
+.aiout:empty{display:none}
+.muted{color:var(--fg2);font-size:12px}
+.warn{color:#e8a13a;font-size:12px}
+hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+.hint{font-size:12px;color:var(--fg2);margin-top:4px}
+.hidden{display:none!important}
+
+@media (max-width:360px){.dc-meta{font-size:12px}}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="h-row">
+    <div>
+      <div class="h-title">Московский марафон 2027 · цель &lt;3:15</div>
+      <div class="h-sub" id="countdown">—</div>
+    </div>
+    <button class="btn-ghost" id="btnSettings" style="padding:8px 12px;border-radius:10px;font-size:13px">⚙</button>
+  </div>
+  <div class="h-stats">
+    <div class="h-stat">Готово <b id="stDone">0</b>/<span id="stTotal">0</span></div>
+    <div class="h-stat">Км план <b id="stKmPlan">0</b></div>
+    <div class="h-stat">Км факт <b id="stKmAct">0</b></div>
+    <div class="h-stat">Прогноз <b id="stPredict">—</b></div>
+  </div>
+  <div class="zoombar">
+    <button data-z="day" class="on">Сегодня</button>
+    <button data-z="week">Неделя</button>
+    <button data-z="all">Весь план</button>
+  </div>
+</header>
+
+<main class="main" id="main">
+  <div class="weeknav" id="weeknav" style="display:none">
+    <button id="prevPeriod">◀</button>
+    <div class="label" id="periodLabel">—</div>
+    <button id="nextPeriod">▶</button>
+  </div>
+  <div class="suggestions" id="suggestions"></div>
+  <div id="cards"></div>
+</main>
+
+<nav class="actbar">
+  <button id="btnToday">Сегодня</button>
+  <button id="btnExport">Экспорт</button>
+  <button id="btnAi" class="primary">AI</button>
+</nav>
+
+<!-- LOG MODAL -->
+<div class="modal" id="modalLog">
+  <div class="sheet">
+    <div class="grip"></div>
+    <h3 id="logTitle">Тренировка</h3>
+    <div class="muted" id="logPlan">—</div>
+    <h4>Статус</h4>
+    <div class="statpick" id="statpick">
+      <button data-s="pending">План</button>
+      <button data-s="done">Сделано</button>
+      <button data-s="partial">Частично</button>
+      <button data-s="skipped">Пропуск</button>
+      <button data-s="over" style="grid-column:span 4;background:rgba(192,132,252,.1);border-color:rgba(192,132,252,.3);color:#c084fc">★ Сверх нормы</button>
+    </div>
+    <h4>Факт</h4>
+    <div class="row">
+      <div><label>Дистанция, км</label><input type="number" inputmode="decimal" step="0.1" id="fDist" placeholder="8.3"></div>
+      <div><label>Время (ч : мин : сек)</label>
+        <div class="tsplit">
+          <input type="number" inputmode="numeric" id="fTimeH" placeholder="ч" min="0">
+          <span class="colon">:</span>
+          <input type="number" inputmode="numeric" id="fTimeM" placeholder="мин" min="0" max="59">
+          <span class="colon">:</span>
+          <input type="number" inputmode="numeric" id="fTimeS" placeholder="сек" min="0" max="59">
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div><label>Ср. темп (мин : сек / км)</label>
+        <div class="tsplit">
+          <input type="number" inputmode="numeric" id="fPaceM" placeholder="мин" min="0">
+          <span class="colon">:</span>
+          <input type="number" inputmode="numeric" id="fPaceS" placeholder="сек" min="0" max="59">
+        </div>
+      </div>
+      <div><label>Ср. пульс</label><input type="number" inputmode="numeric" id="fHr" placeholder="148"></div>
+    </div>
+    <h4>RPE — субъективное усилие</h4>
+    <div class="rpe" id="rpe">
+      <button data-r="1">1</button><button data-r="2">2</button><button data-r="3">3</button>
+      <button data-r="4">4</button><button data-r="5">5</button><button data-r="6">6</button>
+      <button data-r="7">7</button><button data-r="8">8</button><button data-r="9">9</button><button data-r="10">10</button>
+    </div>
+    <div class="hint" id="rpeHint">1 — очень легко, 5 — комфортно, 7 — темповый, 9 — почти соревновательный, 10 — макс</div>
+    <h4>Погода</h4>
+    <div class="row">
+      <div><label>°C</label><input type="number" inputmode="numeric" id="fTemp" placeholder="14"></div>
+      <div><label>Условия</label>
+        <select id="fCond">
+          <option value="">—</option><option>Солнце</option><option>Облачно</option><option>Дождь</option><option>Ветер</option><option>Жарко</option><option>Холодно</option>
+        </select>
+      </div>
+    </div>
+    <h4>Заметка</h4>
+    <textarea id="fNote" placeholder="Самочувствие, ощущения, отклонения от плана"></textarea>
+    <div class="actions">
+      <button class="btn-ghost" id="btnLogClose">Отмена</button>
+      <button class="btn-danger" id="btnLogReset">Сбросить</button>
+      <button class="btn-primary" id="btnLogSave">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI MODAL -->
+<div class="modal" id="modalAi">
+  <div class="sheet">
+    <div class="grip"></div>
+    <h3>AI-помощник</h3>
+    <div class="muted">Анализирует ваш план и результаты тренировок, предлагает корректировки.</div>
+    <h4>Ваш вопрос / контекст</h4>
+    <textarea id="aiPrompt" placeholder="Например: последнюю неделю чувствую усталость в ногах — что изменить?"></textarea>
+    <div class="actions">
+      <button class="btn-ghost" id="btnAiCopy">Скопировать контекст</button>
+      <button class="btn-primary" id="btnAiSend">Спросить AI</button>
+    </div>
+    <div class="aiout" id="aiOut"></div>
+    <div class="actions">
+      <button class="btn-ghost" id="btnAiClose">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal" id="modalSet">
+  <div class="sheet">
+    <div class="grip"></div>
+    <h3>Настройки</h3>
+    <h4>AI-провайдер</h4>
+    <select id="aiProvider">
+      <option value="openrouter">OpenRouter (бесплатные модели)</option>
+      <option value="yandex">ЯндексGPT (300₽ бесплатно)</option>
+    </select>
+    <div class="hint" id="providerHint">Регистрация: openrouter.ai → Keys → Create Key. Бесплатные модели Llama/Mistral, без VPN.</div>
+    <h4 id="apiKeyLabel">API key</h4>
+    <input type="password" id="apiKey" placeholder="sk-or-v1-...">
+    <div class="row hidden" id="yandexExtra">
+      <div><label>Folder ID</label><input type="text" id="yandexFolder" placeholder="b1g..."></div>
+    </div>
+    <h4>Модель</h4>
+    <select id="model"></select>
+    <div class="hint" id="modelHint"></div>
+    <hr>
+    <h4>Профиль</h4>
+    <div class="row">
+      <div><label>Возраст</label><input type="number" id="pAge"></div>
+      <div><label>Вес, кг</label><input type="number" step="0.1" id="pWeight"></div>
+    </div>
+    <div class="row">
+      <div><label>Рост, см</label><input type="number" id="pHeight"></div>
+      <div><label>Цель марафон</label><input type="text" id="pGoal" placeholder="3:12:00"></div>
+    </div>
+    <hr>
+    <div class="actions">
+      <button class="btn-danger" id="btnReset">Сбросить всё</button>
+      <button class="btn-primary" id="btnSetSave">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>

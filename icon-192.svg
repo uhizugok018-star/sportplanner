@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="42" fill="#0b0d10"/>
+  <g transform="translate(96,96)">
+    <circle r="62" fill="none" stroke="#3a86ff" stroke-width="4" opacity="0.3"/>
+    <circle r="62" fill="none" stroke="#3a86ff" stroke-width="4"
+      stroke-dasharray="97.4 292.6" stroke-dashoffset="-24.3"
+      stroke-linecap="round"/>
+    <text y="6" text-anchor="middle" font-family="-apple-system,SF Pro,Helvetica,Arial,sans-serif"
+      font-size="38" font-weight="700" fill="#eef2f6">42.2</text>
+    <text y="26" text-anchor="middle" font-family="-apple-system,SF Pro,Helvetica,Arial,sans-serif"
+      font-size="14" font-weight="600" fill="#3a86ff">км</text>
+  </g>
+  <text x="96" y="178" text-anchor="middle" font-family="-apple-system,SF Pro,Helvetica,Arial,sans-serif"
+    font-size="16" font-weight="700" fill="#9aa4b1" letter-spacing="3">RUN</text>
+</svg>
