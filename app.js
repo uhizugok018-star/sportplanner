@@ -22,7 +22,7 @@ const AI_PROVIDERS = {
   },
   yandex: {
     name: "ЯндексGPT",
-    url: "https://llm.api.cloud.yandex.net/foundationModels/v1/completion",
+    url: "https://functions.yandexcloud.net/d4ekootniaavna0632t9",
     models: [
       {id:"yandexgpt-lite",label:"YandexGPT Lite (быстрее)"},
       {id:"yandexgpt",label:"YandexGPT (точнее)"}
@@ -861,18 +861,19 @@ document.getElementById("btnAiSend").addEventListener("click",async()=>{
   try{
     let headers,body,url;
     if(provider==="yandex"){
-      // YandexGPT API
-      const folderId=cfg.yandexFolder||cfg.apiKey.split(":")[0]||"";
+      // YandexGPT API via Cloud Function proxy
+      const folderId=cfg.yandexFolder||"";
+      const apiKey=cfg.apiKey.includes(":")?cfg.apiKey.split(":").pop():cfg.apiKey;
       url=AI_PROVIDERS.yandex.url;
-      headers={"Authorization":`Bearer ${cfg.apiKey}`,"Content-Type":"application/json"};
+      headers={"Content-Type":"application/json"};
       body=JSON.stringify({
-        modelUri:`gpt://${folderId}/${model}`,
-        completionMessages:[
+        apiKey:apiKey,
+        folderId:folderId,
+        model:model,
+        messages:[
           {role:"system",text:AI_SYSTEM_PROMPT},
           {role:"user",text:`${userQ}\n\n${buildAiContext()}`}
-        ],
-        stream:false,
-        completionOptions:{temperature:0.7,maxTokens:2000}
+        ]
       });
     }else{
       // OpenRouter (OpenAI-compatible)

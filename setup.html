@@ -46,9 +46,9 @@ input:focus{border-color:var(--accent)}
     </div>
 
     <div id="yandexFields">
-      <label>IAM-токен (ID:Секрет)</label>
-      <input id="apiKey" type="text" placeholder="aje...:AQVN..." autocomplete="off" spellcheck="false">
-      <div class="hint">ID ключа : Секрет (через двоеточие)</div>
+      <label>API-ключ (секрет)</label>
+      <input id="apiKey" type="text" placeholder="AQVN..." autocomplete="off" spellcheck="false">
+      <div class="hint">Только секретная часть ключа (начинается с AQVN...)</div>
 
       <label>Folder ID</label>
       <input id="folder" type="text" placeholder="b1g..." autocomplete="off" spellcheck="false">
@@ -124,14 +124,15 @@ document.getElementById("btnSave").addEventListener("click",()=>{
 
 async function testApi(key,folder,model,$msg){
   try{
-    const r=await fetch("https://llm.api.cloud.yandex.net/foundationModels/v1/completion",{
+    const proxyUrl="https://functions.yandexcloud.net/d4ekootniaavna0632t9";
+    const r=await fetch(proxyUrl,{
       method:"POST",
-      headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},
+      headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
-        modelUri:`gpt://${folder}/${model}`,
-        completionMessages:[{role:"user",text:"Скажи одно слово: Привет"}],
-        stream:false,
-        completionOptions:{temperature:0.3,maxTokens:10}
+        apiKey:key,
+        folderId:folder,
+        model:model,
+        messages:[{role:"user",text:"Скажи одним словом: Привет"}]
       })
     });
     if(!r.ok){
