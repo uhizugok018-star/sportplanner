@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<!-- v2: proxy via Cloud Function -->
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0b0d10">
+<title>SportPlanner · Настройка</title>
+<style>
+:root{--bg:#0b0d10;--bg2:#14181d;--bg3:#1c2229;--line:#2a3038;--fg:#eef2f6;--fg2:#9aa4b1;--fg3:#5d6773;--accent:#3a86ff;--ok:#3aa170;--warn:#e8a13a;--err:#e5484d}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;font-size:15px;line-height:1.4}
+.wrap{max-width:420px;margin:0 auto;padding:24px 16px}
+h1{font-size:22px;font-weight:700;margin:0 0 4px}
+.sub{color:var(--fg2);font-size:13px;margin-bottom:24px}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h3{font-size:14px;font-weight:700;margin:0 0 12px;color:var(--accent)}
+label{display:block;font-size:12px;color:var(--fg2);margin-bottom:4px;font-weight:600}
+input{font-family:inherit;font-size:15px;color:var(--fg);background:var(--bg3);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;outline:none;margin-bottom:12px}
+input:focus{border-color:var(--accent)}
+.hint{font-size:11px;color:var(--fg3);margin:-8px 0 12px}
+.radio{display:flex;gap:6px;margin-bottom:14px}
+.radio button{flex:1;padding:10px;border-radius:10px;background:var(--bg3);border:1px solid var(--line);color:var(--fg2);font-weight:600;font-size:13px}
+.radio button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn{display:block;width:100%;padding:14px;border-radius:12px;font-weight:700;font-size:16px;border:none;cursor:pointer;background:var(--accent);color:#fff;margin-top:8px}
+.btn:active{opacity:.8}
+.msg{margin-top:14px;padding:12px;border-radius:10px;font-size:13px;display:none}
+.msg.ok{display:block;background:rgba(58,161,112,.15);color:var(--ok);border:1px solid rgba(58,161,112,.3)}
+.msg.err{display:block;background:rgba(229,72,77,.15);color:var(--err);border:1px solid rgba(229,72,77,.3)}
+.msg a{color:var(--accent)}
+.open{display:none;margin-top:12px;padding:12px;border-radius:10px;background:var(--bg3);border:1px solid var(--line);text-align:center;font-weight:600;color:var(--fg);text-decoration:none}
+.open.show{display:block}
+.warn-box{background:rgba(232,161,58,.1);border:1px solid rgba(232,161,58,.3);border-radius:10px;padding:12px;font-size:12px;color:var(--warn);margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>SportPlanner</h1>
+  <div class="sub">Настройка AI-тренера</div>
+
+  <div class="warn-box">⚠ API-ключ хранится <b>только в браузере</b> (localStorage). Никто, кроме тебя, его не видит.</div>
+
+  <div class="card">
+    <h3>Провайдер</h3>
+    <div class="radio" id="provider">
+      <button data-v="yandex" class="on">ЯндексGPT</button>
+    </div>
+
+    <div id="yandexFields">
+      <label>API-ключ (секрет)</label>
+      <input id="apiKey" type="text" placeholder="AQVN..." autocomplete="off" spellcheck="false">
+      <div class="hint">Только секретная часть ключа (начинается с AQVN...)</div>
+
+      <label>Folder ID</label>
+      <input id="folder" type="text" placeholder="b1g..." autocomplete="off" spellcheck="false">
+    </div>
+
+    <label>Модель</label>
+    <div class="radio" id="model">
+      <button data-v="yandexgpt" class="on">YandexGPT</button>
+      <button data-v="yandexgpt-lite">Lite (быстрее)</button>
+    </div>
+  </div>
+
+  <button class="btn" id="btnSave">Сохранить и открыть</button>
+
+  <div class="msg" id="msg"></div>
+  <a class="open" id="openLink" href="index.html">Открыть SportPlanner</a>
+</div>
+
+<script>
+const STORE_KEY="sportplanner_v1";
+const defaultKey="";
+const defaultFolder="b1g73svr1qpltplr1flo";
+
+document.getElementById("folder").value=defaultFolder;
+
+// Model toggle
+document.querySelectorAll("#model button").forEach(b=>{
+  b.addEventListener("click",()=>{
+    document.querySelectorAll("#model button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+  });
+});
+
+// Save
+document.getElementById("btnSave").addEventListener("click",()=>{
+  const key=document.getElementById("apiKey").value.trim();
+  const folder=document.getElementById("folder").value.trim();
+  const model=document.querySelector("#model button.on")?.dataset.v||"yandexgpt";
+  const $msg=document.getElementById("msg");
+
+  if(!key||!folder){
+    $msg.className="msg err";$msg.textContent="Заполни все поля.";
+    return;
+  }
+
+  // Load existing state or create fresh
+  let state;
+  try{
+    const raw=localStorage.getItem(STORE_KEY);
+    state=raw?JSON.parse(raw):null;
+  }catch(e){state=null;}
+
+  if(!state){
+    // Need to create fresh state — but plan data is in app.js
+    // Just set settings, app.js will generate plan on first load
+    state={settings:{},profile:{age:36,height:174,weight:86,goal:"3:12:00"}};
+  }
+
+  if(!state.settings)state.settings={};
+  state.settings.aiProvider="yandex";
+  state.settings.apiKey=key;
+  state.settings.yandexFolder=folder;
+  state.settings.model=model;
+
+  localStorage.setItem(STORE_KEY,JSON.stringify(state));
+
+  $msg.className="msg ok";
+  $msg.innerHTML="Настройки сохранены! Проверяю подключение...";
+
+  // Test API call
+  testApi(key,folder,model,$msg);
+});
+
+async function testApi(key,folder,model,$msg){
+  try{
+    const proxyUrl="https://functions.yandexcloud.net/d4ekootniaavna0632t9";
+    const r=await fetch(proxyUrl,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        apiKey:key,
+        folderId:folder,
+        model:model,
+        messages:[{role:"user",text:"Скажи одним словом: Привет"}]
+      })
+    });
+    if(!r.ok){
+      const t=await r.text();
+      $msg.className="msg err";
+      $msg.innerHTML=`Ошибка ${r.status}: ${t.slice(0,200)}`;
+      return;
+    }
+    const j=await r.json();
+    const txt=(j.result?.alternatives||[]).map(a=>a.message?.text).filter(Boolean).join("");
+    if(txt){
+      $msg.className="msg ok";
+      $msg.innerHTML=`Подключение работает! Ответ: "${txt}"<br><br>Готово — можно открывать приложение.`;
+      document.getElementById("openLink").classList.add("show");
+    }else{
+      $msg.className="msg err";
+      $msg.innerHTML=`Пустой ответ: ${JSON.stringify(j).slice(0,200)}`;
+    }
+  }catch(e){
+    $msg.className="msg err";
+    $msg.innerHTML=`Ошибка сети: ${e.message}. Но настройки сохранены — попробуй открыть приложение.`;
+    document.getElementById("openLink").classList.add("show");
+  }
+}
+</script>
+</body>
+</html>
+ 
+ 
