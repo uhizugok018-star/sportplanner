@@ -928,27 +928,24 @@ document.getElementById("btnAiSend").addEventListener("click",async()=>{
     // Extract plan changes from AI response
     let changes=null;
     let cleanTxt=txt;
-    // Try multiple formats
-    const patterns=[
-      // {"plan-changes": [...]}
-      /\{[^`]*?"plan-changes"\s*:\s*(\[[\s\S]*?\])\s*\}/,
-      // ```...plan-changes: [...]...```
-      /```[\s\S]*?plan-changes\s*:\s*(\[[\s\S]*?\])[\s\S]*?```/,
-      // plan-changes: [...]
-      /plan-changes\s*:\s*(\[[\s\S]*?\])/,
-      // ```plan-changes\n[...]\n```
-      /```plan-changes\s*\n(\[[\s\S]*?\])\n```/
-    ];
-    for(const pat of patterns){
-      const m=txt.match(pat);
-      if(m){
-        try{
-          changes=JSON.parse(m[1]);
-          cleanTxt=txt.replace(m[0],'').trim();
-          break;
-        }catch(e){/* try next pattern */}
+    try{
+      // Find any JSON block containing "plan-changes"
+      const jsonMatch=txt.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+      if(jsonMatch){
+        let parsed=JSON.parse(jsonMatch[1].trim());
+        if(parsed["plan-changes"]) changes=parsed["plan-changes"];
+        else if(Array.isArray(parsed)) changes=parsed;
+        if(changes) cleanTxt=txt.replace(jsonMatch[0],'').trim();
       }
-    }
+      // Fallback: find plan-changes: [...] inline
+      if(!changes){
+        const inline=txt.match(/plan-changes\s*:\s*(\[[\s\S]*?\])/);
+        if(inline){
+          changes=JSON.parse(inline[1]);
+          cleanTxt=txt.replace(inline[0],'').trim();
+        }
+      }
+    }catch(e){/* parse failed */}
     $aiOut.textContent=cleanTxt||txt;
     if(changes&&changes.length) showAiChanges(changes);
   }catch(e){
