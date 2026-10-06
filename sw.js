@@ -1,4 +1,4 @@
-const CACHE = "sportplanner-v1";
+const CACHE = "sportplanner-v2";
 const ASSETS = [
   "/index.html",
   "/app.js",
