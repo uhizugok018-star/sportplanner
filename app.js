@@ -33,7 +33,7 @@ const AI_PROVIDERS = {
 };
 
 const DEFAULT_SETTINGS = {
-  apiKey: "", aiProvider: "openrouter", model: "meta-llama/llama-3.1-8b-instruct:free",
+  apiKey: "", aiProvider: "yandex", model: "yandexgpt-lite",
   yandexFolder: ""
 };
 
