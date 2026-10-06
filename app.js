@@ -845,7 +845,15 @@ function buildAiContext(){
   return`${profile}\nЦель: марафон ${RACE_DATE}, ${GOAL_TIME} (темп ${GOAL_PACE}/км).\nСегодня: ${TODAY}.\n${predStr}\n\nПлан и факт (последние/следующие 4 недели):\n${items}`;
 }
 
-const AI_SYSTEM_PROMPT=`Ты — опытный беговой тренер. Анализируешь план подготовки к марафону и фактические результаты любителя. Даёшь конкретные, безопасные рекомендации с учётом возраста и веса. Отвечай кратко, по-русски: 1) оценка состояния, 2) прогноз на марафон, 3) что изменить в плане (по датам), 4) на что обратить внимание. Без медицинских советов; при жалобах на боль — рекомендуй разгрузку.`;
+const AI_SYSTEM_PROMPT=`Ты — опытный беговой тренер. Анализируешь план подготовки к марафону и фактические результаты любителя. Даёшь конкретные, безопасные рекомендации с учётом возраста и веса. Отвечай кратко, по-русски: 1) оценка состояния, 2) прогноз на марафон, 3) что изменить в плане (по датам), 4) на что обратить внимание. Без медицинских советов; при жалобах на боль — рекомендуй разгрузку.
+
+Если предлагаешь ИЗМЕНИТЬ план, вставь в конец ответа JSON-блок:
+\`\`\`plan-changes
+[
+  {"date":"YYYY-MM-DD","type":"тип","km":число,"pace":"темп","desc":"описание"}
+]
+\`\`\`
+Где date — дата тренировки, type — тип (easy/tempo/interval/long/fartlek/rest/cross), km — дистанция, pace — темп, desc — описание. Включай только изменённые тренировки. Если предлагаешь отменить тренировку: {"date":"...","type":"rest","km":0,"desc":"отдых"}.`;
 
 document.getElementById("btnAiCopy").addEventListener("click",async()=>{
   const userQ=document.getElementById("aiPrompt").value||"Проанализируй ход подготовки и предложи корректировки плана.";
@@ -925,7 +933,20 @@ document.getElementById("btnAiSend").addEventListener("click",async()=>{
       $aiOut.textContent=`Пустой ответ. Ответ сервера: ${JSON.stringify(j).slice(0,500)}`;
       return;
     }
-    $aiOut.textContent=txt;
+    // Extract plan changes from AI response
+    const changesMatch=txt.match(/```plan-changes\s*\n([\s\S]*?)```/);
+    if(changesMatch){
+      try{
+        const changes=JSON.parse(changesMatch[1]);
+        const cleanTxt=txt.replace(/```plan-changes\s*\n[\s\S]*?```/,'').trim();
+        $aiOut.textContent=cleanTxt;
+        showAiChanges(changes);
+      }catch(e){
+        $aiOut.textContent=txt;
+      }
+    }else{
+      $aiOut.textContent=txt;
+    }
   }catch(e){
     if(e.name==='AbortError'){
       $aiOut.textContent=`Таймаут (45 сек). Сервер не ответил вовремя. Попробуйте:\n1. Выбрать модель YandexGPT Lite (быстрее)\n2. Задать более короткий вопрос\n3. Повторить позже`;
@@ -933,6 +954,44 @@ document.getElementById("btnAiSend").addEventListener("click",async()=>{
       $aiOut.textContent=`Ошибка: ${e.message}\n\nПроверьте подключение к интернету и API key в настройках.`;
     }
   }
+});
+
+// ============ AI PLAN CHANGES ============
+let pendingChanges=[];
+function showAiChanges(changes){
+  pendingChanges=changes;
+  const $list=document.getElementById("aiChangesList");
+  const typeNames={easy:"Лёгкая",tempo:"Темповая",interval:"Интервалы",long:"Длинная",fartlek:"Фартлек",rest:"Отдых",cross:"Кросс"};
+  $list.innerHTML=changes.map(c=>{
+    const d=new Date(c.date);
+    const day=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"][d.getDay()];
+    return `<div style="padding:6px 0;border-bottom:1px solid #222">
+      <b>${c.date} (${day})</b> — ${typeNames[c.type]||c.type} ${c.km||0}км @ ${c.pace||"—"}<br>
+      <span style="color:#888;font-size:13px">${c.desc||""}</span>
+    </div>`;
+  }).join("");
+  document.getElementById("aiChanges").style.display="block";
+}
+document.getElementById("btnAiApply").addEventListener("click",()=>{
+  pendingChanges.forEach(ch=>{
+    const idx=state.plan.findIndex(p=>p.date===ch.date);
+    if(idx>=0){
+      state.plan[idx].type=ch.type;
+      state.plan[idx].km=ch.km;
+      state.plan[idx].pace=ch.pace||state.plan[idx].pace;
+      state.plan[idx].desc=ch.desc||state.plan[idx].desc;
+    }
+  });
+  save();
+  renderWeek();
+  document.getElementById("aiChanges").style.display="none";
+  $aiOut.textContent="✅ Изменения применены!";
+  pendingChanges=[];
+});
+document.getElementById("btnAiReject").addEventListener("click",()=>{
+  document.getElementById("aiChanges").style.display="none";
+  $aiOut.textContent="Изменения отклонены.";
+  pendingChanges=[];
 });
 
 // ============ EXPORT ============
