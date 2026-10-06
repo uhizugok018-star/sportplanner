@@ -966,30 +966,36 @@ function showAiChanges(changes){
   pendingChanges=changes;
   const $list=document.getElementById("aiChangesList");
   const typeNames={easy:"Лёгкая",tempo:"Темповая",interval:"Интервалы",long:"Длинная",fartlek:"Фартлек",rest:"Отдых",cross:"Кросс"};
-  $list.innerHTML=changes.map(c=>{
+  $list.innerHTML=changes.map((c,i)=>{
     const d=new Date(c.date);
     const day=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"][d.getDay()];
-    return `<div style="padding:6px 0;border-bottom:1px solid #222">
-      <b>${c.date} (${day})</b> — ${typeNames[c.type]||c.type} ${c.km||0}км @ ${c.pace||"—"}<br>
-      <span style="color:#888;font-size:13px">${c.desc||""}</span>
+    return `<div style="padding:6px 0;border-bottom:1px solid #222;display:flex;align-items:flex-start;gap:8px">
+      <input type="checkbox" id="ch${i}" checked style="margin-top:4px;accent-color:#4fc3f7">
+      <label for="ch${i}" style="cursor:pointer">
+        <b>${c.date} (${day})</b> — ${typeNames[c.type]||c.type} ${c.km||0}км @ ${c.pace||"—"}<br>
+        <span style="color:#888;font-size:13px">${c.desc||""}</span>
+      </label>
     </div>`;
   }).join("");
   document.getElementById("aiChanges").style.display="block";
 }
 document.getElementById("btnAiApply").addEventListener("click",()=>{
-  pendingChanges.forEach(ch=>{
+  let applied=0;
+  pendingChanges.forEach((ch,i)=>{
+    if(!document.getElementById(`ch${i}`)?.checked) return;
     const idx=state.plan.findIndex(p=>p.date===ch.date);
     if(idx>=0){
       state.plan[idx].type=ch.type;
       state.plan[idx].km=ch.km;
       state.plan[idx].pace=ch.pace||state.plan[idx].pace;
       state.plan[idx].desc=ch.desc||state.plan[idx].desc;
+      applied++;
     }
   });
   save();
   renderWeek();
   document.getElementById("aiChanges").style.display="none";
-  $aiOut.textContent="✅ Изменения применены!";
+  $aiOut.textContent=applied?`✅ Применено изменений: ${applied}`:"Изменения не выбраны.";
   pendingChanges=[];
 });
 document.getElementById("btnAiReject").addEventListener("click",()=>{
