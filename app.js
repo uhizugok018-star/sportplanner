@@ -823,7 +823,14 @@ $modalAi.addEventListener("click",e=>{if(e.target===$modalAi)$modalAi.classList.
 
 function buildAiContext(){
   const profile=`Бегун: ${state.profile.age} лет, ${state.profile.height}см, ${state.profile.weight}кг.`;
-  const items=state.plan.map(p=>{
+  // Send only recent 4 weeks + next 4 weeks to avoid timeout
+  const today=new Date(TODAY);
+  const cutoff=new Date(today);cutoff.setDate(cutoff.getDate()-28);
+  const future=new Date(today);future.setDate(future.getDate()+28);
+  const items=state.plan.filter(p=>{
+    const d=new Date(p.date);
+    return d>=cutoff && d<=future;
+  }).map(p=>{
     const a=p.actual;
     let line=`${p.date} (${p.wd}) [${p.type}] ${p.title} — план ${p.km||0}км @ ${p.pace}`;
     if(a){line+=` | факт: ${a.status}`;
@@ -835,7 +842,7 @@ function buildAiContext(){
   }).join("\n");
   const pred=predictMarathon();
   const predStr=pred?`Текущий прогноз марафон по факту: ${fmtSec(pred)}.`:"";
-  return`${profile}\nЦель: марафон ${RACE_DATE}, ${GOAL_TIME} (темп ${GOAL_PACE}/км).\nСегодня: ${TODAY}.\n${predStr}\n\nПлан и факт по дням:\n${items}`;
+  return`${profile}\nЦель: марафон ${RACE_DATE}, ${GOAL_TIME} (темп ${GOAL_PACE}/км).\nСегодня: ${TODAY}.\n${predStr}\n\nПлан и факт (последние/следующие 4 недели):\n${items}`;
 }
 
 const AI_SYSTEM_PROMPT=`Ты — опытный беговой тренер. Анализируешь план подготовки к марафону и фактические результаты любителя. Даёшь конкретные, безопасные рекомендации с учётом возраста и веса. Отвечай кратко, по-русски: 1) оценка состояния, 2) прогноз на марафон, 3) что изменить в плане (по датам), 4) на что обратить внимание. Без медицинских советов; при жалобах на боль — рекомендуй разгрузку.`;
