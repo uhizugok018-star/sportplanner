@@ -897,7 +897,10 @@ document.getElementById("btnAiSend").addEventListener("click",async()=>{
       });
     }
 
-    const r=await fetch(url,{method:"POST",headers,body});
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),45000);
+    const r=await fetch(url,{method:"POST",headers,body,signal:ctrl.signal});
+    clearTimeout(timer);
     if(!r.ok){
       const t=await r.text();
       if(r.status===429){
@@ -924,7 +927,11 @@ document.getElementById("btnAiSend").addEventListener("click",async()=>{
     }
     $aiOut.textContent=txt;
   }catch(e){
-    $aiOut.textContent=`Ошибка: ${e.message}\n\nПроверьте подключение к интернету и API key в настройках.`;
+    if(e.name==='AbortError'){
+      $aiOut.textContent=`Таймаут (45 сек). Сервер не ответил вовремя. Попробуйте:\n1. Выбрать модель YandexGPT Lite (быстрее)\n2. Задать более короткий вопрос\n3. Повторить позже`;
+    }else{
+      $aiOut.textContent=`Ошибка: ${e.message}\n\nПроверьте подключение к интернету и API key в настройках.`;
+    }
   }
 });
 
