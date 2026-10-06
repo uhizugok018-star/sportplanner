@@ -845,15 +845,7 @@ function buildAiContext(){
   return`${profile}\nЦель: марафон ${RACE_DATE}, ${GOAL_TIME} (темп ${GOAL_PACE}/км).\nСегодня: ${TODAY}.\n${predStr}\n\nПлан и факт (последние/следующие 4 недели):\n${items}`;
 }
 
-const AI_SYSTEM_PROMPT=`Ты — опытный беговой тренер. Анализируешь план подготовки к марафону и фактические результаты любителя. Даёшь конкретные, безопасные рекомендации с учётом возраста и веса. Отвечай кратко, по-русски: 1) оценка состояния, 2) прогноз на марафон, 3) что изменить в плане (по датам), 4) на что обратить внимание. Без медицинских советов; при жалобах на боль — рекомендуй разгрузку.
-
-Если предлагаешь ИЗМЕНИТЬ план, вставь в конец ответа JSON-блок:
-\`\`\`plan-changes
-[
-  {"date":"YYYY-MM-DD","type":"тип","km":число,"pace":"темп","desc":"описание"}
-]
-\`\`\`
-Где date — дата тренировки, type — тип (easy/tempo/interval/long/fartlek/rest/cross), km — дистанция, pace — темп, desc — описание. Включай только изменённые тренировки. Если предлагаешь отменить тренировку: {"date":"...","type":"rest","km":0,"desc":"отдых"}.`;
+const AI_SYSTEM_PROMPT=`Ты — опытный беговой тренер. Отвечай кратко, по-русски. Если пользователь просит ИЗМЕНИТЬ план, СКОРРЕКТИРОВАТЬ тренировку, ПЕРЕНЕСТИ или ОТМЕНИТЬ — ты ОБЯЗАН включить в конец ответа JSON-блок с изменениями. Формат строго: plan-changes: [{"date":"YYYY-MM-DD","type":"тип","km":число,"pace":"темп","desc":"описание"}]. Типы: easy, tempo, interval, long, fartlek, rest, cross. Если отмена тренировки: type:"rest", km:0. Без JSON-блока изменения НЕ применятся.`;
 
 document.getElementById("btnAiCopy").addEventListener("click",async()=>{
   const userQ=document.getElementById("aiPrompt").value||"Проанализируй ход подготовки и предложи корректировки плана.";
@@ -934,19 +926,24 @@ document.getElementById("btnAiSend").addEventListener("click",async()=>{
       return;
     }
     // Extract plan changes from AI response
-    const changesMatch=txt.match(/```plan-changes\s*\n([\s\S]*?)```/);
-    if(changesMatch){
+    let changes=null;
+    let cleanTxt=txt;
+    // Try multiple formats: ```plan-changes [...], plan-changes: [...], ```\nplan-changes: [...]
+    const m1=txt.match(/```plan-changes\s*:?\s*\n?([\s\S]*?)```/);
+    const m2=txt.match(/plan-changes\s*:\s*(\[[\s\S]*?\])/);
+    const mArr=m1||m2;
+    if(mArr){
       try{
-        const changes=JSON.parse(changesMatch[1]);
-        const cleanTxt=txt.replace(/```plan-changes\s*\n[\s\S]*?```/,'').trim();
-        $aiOut.textContent=cleanTxt;
-        showAiChanges(changes);
-      }catch(e){
-        $aiOut.textContent=txt;
-      }
-    }else{
-      $aiOut.textContent=txt;
+        // Try to parse the JSON array
+        let jsonStr=mArr[1].trim();
+        // If it starts with [, parse as array; otherwise wrap
+        if(!jsonStr.startsWith('[')) jsonStr='['+jsonStr+']';
+        changes=JSON.parse(jsonStr);
+        cleanTxt=txt.replace(mArr[0],'').trim();
+      }catch(e){/* parse failed, show raw text */}
     }
+    $aiOut.textContent=cleanTxt||txt;
+    if(changes&&changes.length) showAiChanges(changes);
   }catch(e){
     if(e.name==='AbortError'){
       $aiOut.textContent=`Таймаут (45 сек). Сервер не ответил вовремя. Попробуйте:\n1. Выбрать модель YandexGPT Lite (быстрее)\n2. Задать более короткий вопрос\n3. Повторить позже`;
