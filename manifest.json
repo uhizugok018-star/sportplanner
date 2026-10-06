@@ -2,7 +2,7 @@
   "name": "SportPlanner · Марафон 2027",
   "short_name": "SportPlanner",
   "description": "План подготовки к марафону с AI-тренером",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0b0d10",
