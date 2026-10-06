@@ -845,7 +845,15 @@ function buildAiContext(){
   return`${profile}\nЦель: марафон ${RACE_DATE}, ${GOAL_TIME} (темп ${GOAL_PACE}/км).\nСегодня: ${TODAY}.\n${predStr}\n\nПлан и факт (последние/следующие 4 недели):\n${items}`;
 }
 
-const AI_SYSTEM_PROMPT=`Ты — опытный беговой тренер. Отвечай кратко, по-русски. Если пользователь просит ИЗМЕНИТЬ план, СКОРРЕКТИРОВАТЬ тренировку, ПЕРЕНЕСТИ или ОТМЕНИТЬ — ты ОБЯЗАН включить в конец ответа JSON-блок с изменениями. Формат строго: plan-changes: [{"date":"YYYY-MM-DD","type":"тип","km":число,"pace":"темп","desc":"описание"}]. Типы: easy, tempo, interval, long, fartlek, rest, cross. Если отмена тренировки: type:"rest", km:0. Без JSON-блока изменения НЕ применятся.`;
+const AI_SYSTEM_PROMPT=`Ты — опытный беговой тренер. Отвечай кратко, по-русски. Если пользователь просит ДОБАВИТЬ, ИЗМЕНИТЬ, ПЕРЕНЕСТИ тренировку — ты ОБЯЗАН предложить 3 варианта тренировок и включить их в конец ответа в JSON-блоке. Формат строго:
+\`\`\`json
+{"plan-changes": [
+  {"date":"YYYY-MM-DD","type":"тип","km":число,"pace":"темп","desc":"Описание варианта 1"},
+  {"date":"YYYY-MM-DD","type":"тип","km":число,"pace":"темп","desc":"Описание варианта 2"},
+  {"date":"YYYY-MM-DD","type":"тип","km":число,"pace":"темп","desc":"Описание варианта 3"}
+]}
+\`\`\`
+Типы: easy, tempo, interval, long, fartlek, rest, cross. Все варианты на одну и ту же дату. В desc опиши характер тренировки. Без JSON-блока изменения НЕ применятся.`;
 
 document.getElementById("btnAiCopy").addEventListener("click",async()=>{
   const userQ=document.getElementById("aiPrompt").value||"Проанализируй ход подготовки и предложи корректировки плана.";
@@ -966,33 +974,38 @@ function showAiChanges(changes){
   $list.innerHTML=changes.map((c,i)=>{
     const d=new Date(c.date);
     const day=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"][d.getDay()];
-    return `<div style="padding:6px 0;border-bottom:1px solid #222;display:flex;align-items:flex-start;gap:8px">
-      <input type="checkbox" id="ch${i}" checked style="margin-top:4px;accent-color:#4fc3f7">
-      <label for="ch${i}" style="cursor:pointer">
-        <b>${c.date} (${day})</b> — ${typeNames[c.type]||c.type} ${c.km||0}км @ ${c.pace||"—"}<br>
-        <span style="color:#888;font-size:13px">${c.desc||""}</span>
+    return `<div style="padding:8px;margin-bottom:6px;border:1px solid #333;border-radius:8px;display:flex;align-items:flex-start;gap:8px;cursor:pointer" onclick="document.getElementById('ch${i}').checked=true" class="ai-change-card">
+      <input type="radio" name="aiChange" id="ch${i}" ${i===0?"checked":""} style="margin-top:4px;accent-color:#4fc3f7">
+      <label for="ch${i}" style="cursor:pointer;flex:1">
+        <b>${typeNames[c.type]||c.type} ${c.km||0}км</b> @ ${c.pace||"—"}<br>
+        <span style="color:#aaa;font-size:13px">${c.desc||""}</span>
       </label>
     </div>`;
   }).join("");
   document.getElementById("aiChanges").style.display="block";
 }
 document.getElementById("btnAiApply").addEventListener("click",()=>{
-  let applied=0;
-  pendingChanges.forEach((ch,i)=>{
-    if(!document.getElementById(`ch${i}`)?.checked) return;
-    const idx=state.plan.findIndex(p=>p.date===ch.date);
-    if(idx>=0){
-      state.plan[idx].type=ch.type;
-      state.plan[idx].km=ch.km;
-      state.plan[idx].pace=ch.pace||state.plan[idx].pace;
-      state.plan[idx].desc=ch.desc||state.plan[idx].desc;
-      applied++;
-    }
-  });
+  const sel=pendingChanges.findIndex((_,i)=>document.getElementById(`ch${i}`)?.checked);
+  if(sel<0){$aiOut.textContent="Выберите вариант.";return;}
+  const ch=pendingChanges[sel];
+  const idx=state.plan.findIndex(p=>p.date===ch.date);
+  if(idx>=0){
+    // Update existing
+    state.plan[idx].type=ch.type;
+    state.plan[idx].km=ch.km;
+    state.plan[idx].pace=ch.pace||state.plan[idx].pace;
+    state.plan[idx].desc=ch.desc||state.plan[idx].desc;
+  }else{
+    // Insert new training
+    const d=new Date(ch.date);
+    const wd=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"][d.getDay()];
+    state.plan.push({date:ch.date,type:ch.type,km:ch.km,pace:ch.pace,desc:ch.desc||"",wd,title:`${ch.type} ${ch.km}км`});
+    state.plan.sort((a,b)=>a.date.localeCompare(b.date));
+  }
   save();
   renderWeek();
   document.getElementById("aiChanges").style.display="none";
-  $aiOut.textContent=applied?`✅ Применено изменений: ${applied}`:"Изменения не выбраны.";
+  $aiOut.textContent=`✅ Тренировка добавлена: ${ch.date}, ${ch.type} ${ch.km}км`;
   pendingChanges=[];
 });
 document.getElementById("btnAiReject").addEventListener("click",()=>{
