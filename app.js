@@ -988,24 +988,26 @@ document.getElementById("btnAiApply").addEventListener("click",()=>{
   const sel=pendingChanges.findIndex((_,i)=>document.getElementById(`ch${i}`)?.checked);
   if(sel<0){$aiOut.textContent="Выберите вариант.";return;}
   const ch=pendingChanges[sel];
+  // Normalize type names
+  const typeMap={intervals:"intervals",interval:"intervals",easy:"easy",tempo:"tempo",long:"long",fartlek:"fartlek",rest:"rest",cross:"easy",race:"race"};
+  const t=typeMap[ch.type]||ch.type;
   const idx=state.plan.findIndex(p=>p.date===ch.date);
   if(idx>=0){
-    // Update existing
-    state.plan[idx].type=ch.type;
+    state.plan[idx].type=t;
     state.plan[idx].km=ch.km;
-    state.plan[idx].pace=ch.pace||state.plan[idx].pace;
-    state.plan[idx].desc=ch.desc||state.plan[idx].desc;
+    if(ch.pace)state.plan[idx].pace=ch.pace;
+    if(ch.desc)state.plan[idx].desc=ch.desc;
+    state.plan[idx].title=buildTitle(t,ch.km,ch.pace,ch.desc);
   }else{
-    // Insert new training
-    const d=new Date(ch.date);
-    const wd=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"][d.getDay()];
-    state.plan.push({date:ch.date,type:ch.type,km:ch.km,pace:ch.pace,desc:ch.desc||"",wd,title:`${ch.type} ${ch.km}км`});
+    state.plan.push({date:ch.date,wd:wdRu(ch.date),type:t,title:buildTitle(t,ch.km,ch.pace,ch.desc),km:ch.km,pace:ch.pace||"—",desc:ch.desc||""});
     state.plan.sort((a,b)=>a.date.localeCompare(b.date));
   }
   save();
-  renderWeek();
+  document.getElementById("modalAi").classList.remove("open");
   document.getElementById("aiChanges").style.display="none";
-  $aiOut.textContent=`✅ Тренировка добавлена: ${ch.date}, ${ch.type} ${ch.km}км`;
+  cursor=ch.date;
+  state.zoom="day";
+  render();
   pendingChanges=[];
 });
 document.getElementById("btnAiReject").addEventListener("click",()=>{
