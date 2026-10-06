@@ -26,7 +26,7 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
 
   // API requests: network only (don't cache AI calls)
-  if (url.hostname.includes("openrouter.ai") || url.hostname.includes("yandex.net")) {
+  if (url.hostname.includes("openrouter.ai") || url.hostname.includes("yandex") || url.hostname.includes("functions.")) {
     return;
   }
 
